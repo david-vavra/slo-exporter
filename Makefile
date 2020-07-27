@@ -2,12 +2,15 @@
 DOCKER_COMPOSE ?= docker-compose
 src_dir        := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
+all: OS=linux
+all: ARCH=amd64
 all: lint build test-and-coverage e2e-test
 
+# FIXME variables no longer applicable to non gitlab-ci world
 build:
-	GOOS=$(OS) CGO_ENABLED=0 go build -a -ldflags "-X 'main.buildVersion=${SLO_EXPORTER_VERSION}' -X 'main.buildRevision=${CI_COMMIT_SHA}' -X 'main.buildBranch=${CI_COMMIT_BRANCH}' -X 'main.buildTag=${CI_COMMIT_TAG}' -extldflags '-static'" -o slo_exporter $(src_dir)/cmd/slo_exporter.go
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -a -ldflags "-X 'main.buildVersion=${SLO_EXPORTER_VERSION}' -X 'main.buildRevision=${CI_COMMIT_SHA}' -X 'main.buildBranch=${CI_COMMIT_BRANCH}' -X 'main.buildTag=${CI_COMMIT_TAG}' -extldflags '-static'" -o build/$(OS)-$(ARCH)/slo_exporter $(src_dir)/cmd/slo_exporter.go
 
-lint:
+g diflint:
 	go get github.com/mgechev/revive
 	revive -formatter friendly -config .revive.toml $(shell find $(src_dir) -name "*.go" | grep -v "^$(src_dir)/vendor/")
 
