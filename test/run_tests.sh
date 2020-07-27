@@ -28,8 +28,12 @@ function evaluate_test_result {
     echo "  OK: found all expected metrics"
 }
 
+if [ -z "$1" ]; then
+    my_exit 1 "Usage: $0 <path_to_slo_exporter_binary>"
+fi
+
+SLO_EXPORTER=$(realpath "$1")
 SCRIPT_DIR=$( dirname "$(readlink -f $0)" )
-SLO_EXPORTER="${SCRIPT_DIR}/../slo_exporter"
 
 TEST_DIR_PREFIX="Test_"
 TEST_RESULT_DIR="test_output"

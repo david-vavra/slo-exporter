@@ -1,5 +1,6 @@
 #!/usr/bin/make -f 
 DOCKER_COMPOSE ?= docker-compose
+binary_path 	= build/$(OS)-$(ARCH)/slo_exporter
 src_dir        := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 all: OS=linux
@@ -8,14 +9,16 @@ all: lint build test-and-coverage e2e-test
 
 # FIXME variables no longer applicable to non gitlab-ci world
 build:
-	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -a -ldflags "-X 'main.buildVersion=${SLO_EXPORTER_VERSION}' -X 'main.buildRevision=${CI_COMMIT_SHA}' -X 'main.buildBranch=${CI_COMMIT_BRANCH}' -X 'main.buildTag=${CI_COMMIT_TAG}' -extldflags '-static'" -o build/$(OS)-$(ARCH)/slo_exporter $(src_dir)/cmd/slo_exporter.go
+	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build -a -ldflags "-X 'main.buildVersion=${SLO_EXPORTER_VERSION}' -X 'main.buildRevision=${CI_COMMIT_SHA}' -X 'main.buildBranch=${CI_COMMIT_BRANCH}' -X 'main.buildTag=${CI_COMMIT_TAG}' -extldflags '-static'" -o $(binary_path) $(src_dir)/cmd/slo_exporter.go
 
-g diflint:
+lint:
 	go get github.com/mgechev/revive
 	revive -formatter friendly -config .revive.toml $(shell find $(src_dir) -name "*.go" | grep -v "^$(src_dir)/vendor/")
 
+e2e-test: OS=linux
+e2e-test: ARCH=amd64
 e2e-test: build
-	./test/run_tests.sh
+	./test/run_tests.sh $(binary_path)
 
 test:
 	go test -v --race -coverprofile=coverage.out $(shell go list ./... | grep -v /vendor/)
