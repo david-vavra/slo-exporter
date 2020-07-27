@@ -2,7 +2,7 @@
 DOCKER_COMPOSE ?= docker-compose
 src_dir        := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-all: lint build test-and-coverage
+all: lint build test-and-coverage e2e-test
 
 build:
 	GOOS=$(OS) CGO_ENABLED=0 go build -a -ldflags "-X 'main.buildVersion=${SLO_EXPORTER_VERSION}' -X 'main.buildRevision=${CI_COMMIT_SHA}' -X 'main.buildBranch=${CI_COMMIT_BRANCH}' -X 'main.buildTag=${CI_COMMIT_TAG}' -extldflags '-static'" -o slo_exporter $(src_dir)/cmd/slo_exporter.go
