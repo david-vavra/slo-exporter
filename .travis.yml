@@ -7,13 +7,13 @@ addons:
   apt:
     update: true
 before_deploy:
-  - ls
-  - tree
-  - export RELEASE_BODY=$(awk '$0 ~ /## \[.+\]/ {release = $2} release == "[]" {print $0}' CHANGELOG.md)
+  - mkdir release
+  - awk '$0 ~ /## \[.+\]/ {release = $2} release == "[]" {print $0}' CHANGELOG.md > release/CHANGELOG
 deploy:
   provider: releases
+  edge: true
   api_key: "$GITHUB_OAUTH_TOKEN"
-  body: ${RELEASE_BODY}
+  release_notes_file: release/CHANGELOG
   file: "build/**/*"
   skip_cleanup: true
   on:
