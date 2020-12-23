@@ -1,6 +1,7 @@
 package access_log_server
 
 import (
+	"encoding/json"
 	"io"
 	"strconv"
 
@@ -80,10 +81,13 @@ func exportResponsePropertiesV3(response *envoy_data_accesslog_v3.HTTPResponsePr
 	return result
 }
 
-func exportHttpLogEntryV3(logEntry *envoy_data_accesslog_v3.HTTPAccessLogEntry) stringmap.StringMap {
-
+func exportHttpLogEntryV3(logEntry *envoy_data_accesslog_v3.HTTPAccessLogEntry) (stringmap.StringMap, error) {
+	logEntryJson, err := json.Marshal(logEntry)
+	if err != nil {
+		return nil, err
+	}
 	result := stringmap.StringMap{
-		"__log_entry_json": logEntry.String(),
+		"__log_entry_json": string(logEntryJson),
 	}
 	// AccessLogCommon
 	result = result.Merge(exportCommonPropertiesV3(logEntry.CommonProperties))
@@ -97,13 +101,16 @@ func exportHttpLogEntryV3(logEntry *envoy_data_accesslog_v3.HTTPAccessLogEntry) 
 	// Response properties
 	result = result.Merge(exportResponsePropertiesV3(logEntry.Response))
 
-	return result
+	return result, nil
 }
 
-func exportTcpLogEntryV3(logEntry *envoy_data_accesslog_v3.TCPAccessLogEntry) stringmap.StringMap {
-
+func exportTcpLogEntryV3(logEntry *envoy_data_accesslog_v3.TCPAccessLogEntry) (stringmap.StringMap, error) {
+	logEntryJson, err := json.Marshal(logEntry)
+	if err != nil {
+		return nil, err
+	}
 	result := stringmap.StringMap{
-		"__log_entry_json": logEntry.String(),
+		"__log_entry_json": string(logEntryJson),
 	}
 	// AccessLogCommon
 	result = result.Merge(exportCommonPropertiesV3(logEntry.CommonProperties))
@@ -112,23 +119,28 @@ func exportTcpLogEntryV3(logEntry *envoy_data_accesslog_v3.TCPAccessLogEntry) st
 	result["ReceivedBytes"] = strconv.FormatUint(logEntry.ConnectionProperties.ReceivedBytes, 10)
 	result["SentBytes"] = strconv.FormatUint(logEntry.ConnectionProperties.SentBytes, 10)
 
-	return result
+	return result, nil
 }
 
 func exportLogEntriesV3(msg *envoy_service_accesslog_v3.StreamAccessLogsMessage) []stringmap.StringMap {
-	res := []stringmap.StringMap{}
+	result := []stringmap.StringMap{}
 
 	if logs := msg.GetHttpLogs(); logs != nil {
 		for _, l := range logs.LogEntry {
 
-			res = append(res, exportHttpLogEntryV3(l))
+			metadata, err := exportHttpLogEntryV3(l)
+			if err != nil {
+				errorsTotal.WithLabelValues("LogEntriesProcessing").Inc()
+				continue
+			}
+			result = append(result, metadata)
 
 			logEntriesTotal.WithLabelValues("HTTP", "v3").Inc()
 		}
 	} else if logs := msg.GetTcpLogs(); logs != nil {
 		for _, l := range logs.LogEntry {
 
-			res = append(res, exportTcpLogEntryV3(l))
+			result = append(result, exportTcpLogEntryV3(l))
 
 			logEntriesTotal.WithLabelValues("TCP", "v3").Inc()
 		}
@@ -137,7 +149,7 @@ func exportLogEntriesV3(msg *envoy_service_accesslog_v3.StreamAccessLogsMessage)
 		errorsTotal.WithLabelValues("UnknownLogType").Inc()
 		// TODO log
 	}
-	return res
+	return result
 }
 
 func (service_v3 *AccessLogServiceV3) StreamAccessLogs(stream envoy_service_accesslog_v3.AccessLogService_StreamAccessLogsServer) error {
