@@ -33,12 +33,12 @@ type accessLogServerConfig struct {
 }
 
 type AccessLogServer struct {
-	outputChannel           chan *event.Raw
-	shutdownChannel         chan struct{}
-	logger                  logrus.FieldLogger
-	done                    bool
-	server                  *grpc.Server
-	service_v2              *AccessLogServiceV2
+	outputChannel   chan *event.Raw
+	shutdownChannel chan struct{}
+	logger          logrus.FieldLogger
+	done            bool
+	server          *grpc.Server
+	//service_v2              *AccessLogServiceV2
 	service_v3              *AccessLogServiceV3
 	address                 string
 	gracefulShutdownTimeout time.Duration
@@ -76,11 +76,11 @@ func (als *AccessLogServer) Run() {
 	// TODO: possibly add an UnknownServiceHandler
 	als.server = grpc.NewServer()
 
-	als.service_v2 = &AccessLogServiceV2{
-		outChan: als.outputChannel,
-		logger:  als.logger,
-	}
-	als.service_v2.Register(als.server)
+	//als.service_v2 = &AccessLogServiceV2{
+	//	outChan: als.outputChannel,
+	//	logger:  als.logger,
+	//}
+	//als.service_v2.Register(als.server)
 	als.service_v3 = &AccessLogServiceV3{
 		outChan: als.outputChannel,
 		logger:  als.logger,
